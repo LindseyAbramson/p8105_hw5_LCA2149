@@ -1,0 +1,153 @@
+---
+title: "p8105_hw5_LCA2149"
+output: html_document
+date: "2025-11-04"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(haven)
+library(broom)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+
+
+# Problem 1
+
+```{r}
+bday_sim = function(n_room) {
+  
+  birthdays = sample(1:365, n_room, replace = TRUE)
+
+  repeated_bday = length(unique(birthdays)) < n_room
+
+  repeated_bday
+  
+}
+
+#Test the function
+bday_sim(20)
+```
+
+Run simulation for group sizes 2 to 50, with 10,000 iterations each.
+```{r}
+bday_sim_results = 
+  expand_grid(
+    bdays = 2:50, 
+    iter = 1:10000
+  ) |> 
+  mutate(
+    result = map_lgl(bdays, bday_sim)
+  ) |> 
+  group_by(
+    bdays
+  ) |> 
+  summarize(
+    prob_repeat = mean(result)
+  )
+```
+
+Plot the results.
+```{r}
+bday_sim_results |> 
+  ggplot(aes(x = bdays, y = prob_repeat)) + 
+  geom_point(color="lightpink") + 
+  geom_line(color="red") +
+  labs(
+    title = "Birthday Problem Simulation",
+    subtitle = "Probability of at least two people sharing a birthday",
+    x = "Group Size",
+    y = "Probability of Shared Birthday"
+  ) +
+  scale_y_continuous(labels = scales::percent)
+```
+The birthday paradox simulation reveals that with just 23 people, there's over a 50% chance of shared birthdays, which contradicts most people's intuitive expectations. The probability rises rapidly, reaching about 90% with 41 people and nearly 97% with 50 people, demonstrating how quickly coincidences become likely due to combinatorial growth. This highlights how human intuition often underestimates probability when dealing with multiple pair combinations rather than specific matches.
+
+## Problem 2
+
+```{r}
+n <- 30
+sigma <- 5
+mu <- 0
+n_sim <- 5000
+alpha <- 0.05
+```
+
+```{r}
+n <- 30
+sigma <- 5
+mu_values <- c(0, 1, 2, 3, 4, 5, 6)
+n_sim <- 5000
+
+# Make empty boxes to store results
+power_results <- numeric(length(mu_values))
+avg_estimate <- numeric(length(mu_values))
+avg_estimate_rejected <- numeric(length(mu_values))
+
+# Loop through each mu value
+for (j in 1:length(mu_values)) {
+  mu <- mu_values[j]
+  
+  # Make empty boxes for this mu
+  mu_hat <- numeric(n_sim)
+  p_values <- numeric(n_sim)
+  
+  # Do 5000 simulations for this mu
+  for (i in 1:n_sim) {
+    x <- rnorm(n, mu, sigma)
+    test <- t.test(x)
+    
+    # Use broom::tidy to get results
+    tidy_result <- tidy(test)
+    mu_hat[i] <- tidy_result$estimate
+    p_values[i] <- tidy_result$p.value
+  }
+  
+  # Save results
+  power_results[j] <- mean(p_values < 0.05)
+  avg_estimate[j] <- mean(mu_hat)
+  
+  # Only look at cases where we rejected H0
+  rejected <- p_values < 0.05
+  if (sum(rejected) > 0) {
+    avg_estimate_rejected[j] <- mean(mu_hat[rejected])
+  } else {
+    avg_estimate_rejected[j] <- NA
+  }
+}
+
+# Plot 1: Power vs True mu
+plot(mu_values, power_results, type = "b", 
+     xlab = "True μ", ylab = "Power",
+     main = "Power vs Effect Size")
+
+# Plot 2: Average estimates
+plot(mu_values, avg_estimate, type = "b", col = "blue",
+     xlab = "True μ", ylab = "Average Estimate",
+     main = "Average Estimates vs True μ",
+     ylim = range(c(avg_estimate, avg_estimate_rejected), na.rm = TRUE))
+
+# Add the estimates from rejected tests
+points(mu_values, avg_estimate_rejected, type = "b", col = "red")
+legend("topleft", legend = c("All tests", "Only rejected H0"), 
+       col = c("blue", "red"), lty = 1)
+```
+
