@@ -163,3 +163,51 @@ city_summary<-homicide_data |>
 kable(city_summary)
 ```
 
+
+```{r}
+# Baltimore, MD specific
+baltimore_results <- homicide_data |>
+  filter(city_state == "Baltimore, MD") |>
+  summarise(
+    total_homicides = n(),
+    unsolved_homicides = sum(disposition == c("Closed without arrest", "Open/No arrest"))
+    )|>
+{function(x) prop.test(x$unsolved, x$total)}() |>
+  broom::tidy() |>
+  select(estimate, conf.low, conf.high)
+
+baltimore_results
+```
+The proportion of homicides that are unsolved in Baltimore, MD is 32.0% (95% CI: 30.3-33.8). 
+
+
+```{r}
+# All cities
+city_proportions <- homicide_data |>
+  group_by(city_state) |>
+  summarize(
+        total_homicides = n(),
+    unsolved_homicides = sum(disposition == c("Closed without arrest", "Open/No arrest"))
+    )|>
+  mutate(
+    test_results = map2(unsolved_homicides, total_homicides, 
+                       ~prop.test(.x, .y) |> broom::tidy())
+  ) |>
+  unnest(test_results) |>
+  select(city_state, unsolved_homicides, total_homicides, estimate, conf.low, conf.high)
+```
+
+```{r}
+# Create plot
+city_proportions |>
+  mutate(city_state = fct_reorder(city_state, estimate)) |>
+  ggplot(aes(x=estimate, y=city_state)) +
+           geom_point() +
+           geom_errorbar(aes(xmin=conf.low, xmax=conf.high), width = 0.2, color = "darkred", alpha=0.7) +
+           labs(
+    title = "Proportion of Unsolved Homicides by City",
+    subtitle = "With 95% Confidence Intervals",
+    x = "Proportion Unsolved",
+    y = "City, State") +
+  theme(axis.text.y = element_text(size = 6))
+```
