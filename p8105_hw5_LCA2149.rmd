@@ -1,6 +1,6 @@
 ---
 title: "p8105_hw5_LCA2149"
-output: html_document
+output: github_document
 date: "2025-11-04"
 ---
 
@@ -10,6 +10,7 @@ library(dplyr)
 library(readxl)
 library(haven)
 library(broom)
+library(knitr)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -92,7 +93,7 @@ n <- 30
 sigma <- 5
 mu_values <- c(0, 1, 2, 3, 4, 5, 6)
 
-# Simple storage
+# storage
 power <- numeric(7)
 avg_all <- numeric(7)
 avg_reject <- numeric(7)
@@ -119,7 +120,8 @@ plot(mu_values, power, type = "b", xlab = "True μ", ylab = "Power")
 
 ```
 
-As seen in plot 1, there is a clear positive relationship between power and effect size. As true effect size increases, the power grows rapidly at risk and then starts to approach 1. 
+There is a clear positive relationship between power and effect size. As true effect size increases, the power grows rapidly at risk and then starts to approach 1. 
+
 
 ```{r}
 # Plot 2  
@@ -135,6 +137,29 @@ The average estimate from rejected tests is only approximately equal to the true
 ## Problem 3
 
 ```{r}
+homicide_data <- read.csv("homicide-data.csv")
+```
 
+The homicide dataset includes information on homicides in 50 large US cities (including Atlanta, Houston, LA, Philly, etc). The dataset includes uid, reported date, victim full name, race, age, and sex, city, state, lat, long, and the disposition (case status). The raw dataset includes these 12 variables and 52,179 cases.
+
+```{r}
+# Create city_state variable
+
+homicide_data =
+  homicide_data |>
+  mutate(
+    city_state = str_c(city, ", ", state)
+  )
+```
+
+```{r}
+# Summarize within cities
+city_summary<-homicide_data |>
+  group_by(city_state) |>
+  summarise(
+    total_homicides = n(),
+    unsolved_homicides = sum(disposition == c("Closed without arrest", "Open/No arrest")))
+
+kable(city_summary)
 ```
 
